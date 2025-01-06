@@ -1,0 +1,53 @@
+{
+    "name": "English",
+    "code": "en-US",
+    "tokens": {
+        "app-title": "giboru",
+        "mainpage-title": "giboru",
+        "generic-error": "Error",
+        "generic_return-back": "Return back",
+
+        "dialog-option_cancel": "Cancel",
+        "dialog-option_confirm": "Confirm",
+
+        "i18n.content-loading_error": "Content loading error",
+        "i18n.content-nocontent": "No content",
+
+        "header-go-back_button-text": "Go back",
+
+        "header-menu-router_load-settings": "Open settings",
+        "header-menu-localStorage_clear": "Clear storage",
+        "header-menu-router_reload-page": "Reload page",
+        "header-menu-router_load-mainpage": "Main page",
+
+        "header-menu_clearStorage-dialog_title": "Clear storage",
+        "header-menu_clearStorage-dialog_desc": "Are you sure you want to clear giboru's local storage?",
+
+
+        "post-list_input-tip": "Enter some tags (e.g: azur_lane cute)",
+        "post-list_footer-paginator_title": "Page %{current} of %{total}",
+
+        "post-view_noparams": "No page params",
+        "post-view_doctitle": "Post #%{id} by %{author} on %{booruName} - %{appTitle}",
+        "post-viewer_alltags-expander_title": "Expand all tags",
+        "post-viewer_response-error": "Client error (or post isn't found): %{error}",
+        "post-viewer_post-download_button": "<i class='material-icons'>download</i><span class='post-viewer_post-download_button-title'>Download</span>",
+        "post-viewer_post-rating_unknown": "Unknown rating",
+        "post-viewer_tag-category_artist": "Artist",
+        "post-viewer_tag-category_copyright": "Copyright",
+        "post-viewer_tag-category_characters": "Characters",
+        "post-viewer_tag-category_general": "General",
+        "post-viewer_tag-category_meta": "Meta",
+
+        "router_page-not-found": "Not found",
+        "router_page-proxytip": "Maybe, you should <a href='#/settings'>enable proxy?</a>",
+
+        "booru_unsupported_booru-protocol": "Your Booru (%{booruName}) is unsupported, sorry about that...",
+
+        "settings-page_title": "Settings",
+        "settings-page_language-selector_title": "Language",
+        "settings-page_proxy-switch_title": "Proxy",
+        "settings-page_booru-selector_title": "Manage Booru's",
+        "settings-page_addbooru-title": "Add a Booru"        
+    }
+}

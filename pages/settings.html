@@ -1,0 +1,219 @@
+<article id="settings-page">
+    <h2 data-i18n-key="settings-page_title"></h2>
+
+    <div style="width: fit-content;">
+        <fieldset id="settings-page_language">
+            <label for="settings-page_language-selector" data-i18n-key="settings-page_language-selector_title"></label>
+            <select id="settings-page_language-selector" name="settings-page_language-selector"
+                autocomplete="off"></select>
+        </fieldset>
+
+        <fieldset id="settings-page_proxy">
+            <label>
+                <input type="checkbox" role="switch" id="settings-page_proxy-switch" autocomplete="off" />
+                <span data-i18n-key="settings-page_proxy-switch_title"></span>
+            </label>
+
+            <input type="url" disabled="" name="settings-page_proxy-input" id="settings-page_proxy-input"
+                autocomplete="off">
+        </fieldset>
+
+        <fieldset id="settings-page_booru" class="settings-page_booru-group">
+            <label for="settings-page_booru-selector" data-i18n-key="settings-page_booru-selector_title"></label>
+
+            <div role="group">
+                <select id="settings-page_booru-selector" name="settings-page_booru-selector"
+                    autocomplete="off"></select>
+
+                <button class="danger group-btn" id="settings-page_booru-remove_booru">
+                    <i class="material-icons">delete</i>
+                </button>
+            </div>
+        </fieldset>
+
+
+        <fieldset class="settings-page_booru-group" name="settings-page_booru-addbooru">
+            <label for="settings-page_booru-addbooru" data-i18n-key="settings-page_addbooru-title"></label>
+            <div role="group">
+                <select type="text" id="settings-page_addbooru-selector_profile"></select>
+
+                <button id="settings-page_addbooru-button" class="group-btn" style="float: right;">
+                    <i class="material-icons">add</i>
+                </button>
+            </div>
+        </fieldset>
+    </div>
+</article>
+
+<style>
+    input,
+    select {
+        width: fit-content;
+    }
+
+    .settings-page_booru-group {
+        max-width: 350px;
+        width: fit-content;
+        padding: 0;
+    }
+
+    .group-btn {
+        padding: 15px;
+    }
+
+    .group-btn i {
+        font-size: 28px;
+    }
+
+    .danger {
+        background-color: var(--pico-form-element-invalid-border-color);
+        border-color: var(--pico-form-element-invalid-border-color);
+    }
+</style>
+
+<script>
+    (async function () {
+        await i18n.translateSector('#settings-page');
+
+        // settings - language
+        const languages = i18n.languages;
+        const currentLang = localStorage.getItem('giboru-language');
+        const languageSelector = $('#settings-page_language-selector');
+
+        languages.forEach(async lang => {
+            const option = document.createElement('option');
+            if (lang.code === currentLang) {
+                option.selected = true;
+            }
+
+            option.value = lang.code;
+            option.innerText = lang.name;
+
+            languageSelector.append(option);
+        });
+
+        languageSelector.onchange = async () => {
+            const selectedLanguage = languageSelector.value;
+            const validLanguage = languages.find(lang => lang.code === selectedLanguage);
+
+            // checking if selected language is exists
+            if (validLanguage.code === selectedLanguage) {
+                localStorage.setItem('giboru-language', selectedLanguage);
+
+                app.logger.info(`changed language to "${selectedLanguage}"`, 'giboru/pages/settings.language');
+            }
+        }
+
+        // settings - proxy
+        const proxyEnabled = app.booru.proxy.getState();
+        const proxySwitch = $('#settings-page_proxy-switch');
+        const proxyInput = $('#settings-page_proxy-input');
+
+        proxyInput.value = app.booru.proxy.url();
+
+        if (proxyEnabled) {
+            proxySwitch.checked = true;
+            proxyInput.disabled = false;
+        }
+
+        proxySwitch.onchange = async () => {
+            localStorage.setItem(app.booru.proxy.dbname, proxySwitch.checked);
+            proxyInput.disabled = !proxySwitch.checked;
+        }
+
+        proxyInput.onchange = async () => {
+            if (proxyInput.validity.valid) {
+                localStorage.setItem(app.booru.proxy.urlDb, proxyInput.value);
+                proxyInput.setAttribute('aria-invalid', false);
+            } else {
+                // some additional basic checks, since built-in browser check is not fully "idiot-proof"
+                if (!proxyInput.value.startsWith('http://') || !proxyInput.value.startsWith('https://')) {
+                    proxyInput.setAttribute('aria-invalid', true);
+                } else {
+                    proxyInput.setAttribute('aria-invalid', true);
+                }
+            }
+        }
+
+        // settings - booru
+        const booruSelector = $('#settings-page_booru-selector');
+
+        booruSelector.onchange = async () => 
+            app.booru.setDefault(booruSelector.value);                        
+        
+        let booruList = app.booru.db.booruList;
+        const defaultBooru = app.booru.getDefault();
+
+        async function updateBooruSelector() {
+            if (booruList.length === 0) {
+                app.logger.warn('no boorus', 'giboru/pages/settings.booruSelector');
+            } else {
+                while (booruSelector.firstChild) {
+                    booruSelector.firstChild.remove();
+                }
+
+                booruList = app.booru.db.booruList;
+
+                Object.keys(booruList)
+                    .forEach(booru => {
+                        const option = document.createElement('option');
+                        if (defaultBooru?.name === booruList[booru]?.name) {
+                            option.selected = true;
+                        }
+
+                        option.value = booruList[booru]?.name;
+                        option.innerText = booruList[booru]?.name;
+
+                        booruSelector.append(option);
+                    });
+            }
+        }
+
+        // adding all booru's to booru selector
+        await updateBooruSelector();
+
+        // remove booru button
+        const removeBooruBtn = $('#settings-page_booru-remove_booru');
+        removeBooruBtn.onclick = async () => {
+            if (booruSelector.value) {
+                await app.booru.db.remove(booruSelector.value);
+                await updateBooruSelector();
+                await updateBooruProfilesSelector();
+            }
+        }
+
+        // adding a new Booru
+        const addBooruProfileSelector = $('#settings-page_addbooru-selector_profile');
+        const addBooruBtn = $('#settings-page_addbooru-button');
+
+        async function updateBooruProfilesSelector() {
+            while (addBooruProfileSelector.firstChild) {
+                addBooruProfileSelector.firstChild.remove();
+            }
+
+            app.booru.db.booruProfiles
+                .forEach(profile => {
+                    // skipping the booru, that already in the added list
+                    if (booruList[profile.name]) return;
+
+                    const option = document.createElement('option');
+                    option.value = profile.name;
+                    option.innerText = profile.name;
+
+                    addBooruProfileSelector.append(option);
+                });
+        }
+
+        await updateBooruProfilesSelector();
+
+        addBooruBtn.onclick = async () => {
+            if (!addBooruProfileSelector.value) return;
+
+            const booruProfile = app.booru.db.booruProfiles.find(p => p.name === addBooruProfileSelector.value);
+            await app.booru.db.add(booruProfile);
+
+            await updateBooruProfilesSelector();
+            await updateBooruSelector();
+        }
+    })();
+</script>

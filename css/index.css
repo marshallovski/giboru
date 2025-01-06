@@ -1,0 +1,85 @@
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/assets/fonts/MI.woff')
+}
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  user-select: none;
+  font-size: 24px;
+  /* Preferred icon size */
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
+
+  /* Support for all WebKit browsers. */
+  -webkit-font-smoothing: antialiased;
+  /* Support for Safari and Chrome. */
+  text-rendering: optimizeLegibility;
+
+  /* Support for Firefox. */
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Support for IE. */
+  font-feature-settings: 'liga';
+}
+
+#component-loader,
+#search-results {
+  text-align: center;
+}
+
+#component-loader {
+  margin-bottom: 5px;
+}
+
+@keyframes pulsate {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.is-skeleton {
+  position: relative;
+  display: inline-block;
+  /* width: 100%;
+  height: 20px; */
+  overflow: hidden;
+  pointer-events: none;
+  padding: 4px;
+  animation: pulsate 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  border-radius: 8px;
+}
+
+.is-skeleton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--pico-muted-border-color);
+}
+
+.skeleton-soul {
+  width: 100%;
+  height: 20px;
+  padding: 16px;
+}
+
+.small {
+  font-size: 16px;
+}
+
+p[role="link"] {
+  cursor: pointer;
+}

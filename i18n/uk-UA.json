@@ -1,0 +1,53 @@
+{
+    "name": "Українська (Ukrainian)",
+    "code": "uk-UA",
+    "tokens": {
+        "app-title": "giboru",
+        "mainpage-title": "giboru",
+        "generic-error": "Помилка",
+        "generic_return-back": "Повернутись",
+
+        "dialog-option_cancel": "Відміна",
+        "dialog-option_confirm": "Підтвердити",
+
+        "i18n.content-loading_error": "Помилка завантаження контенту",
+        "i18n.content-nocontent": "Нема контенту",
+
+        "header-go-back_button-text": "Назад",
+
+        "header-menu-router_load-settings": "Налаштування",
+        "header-menu-localStorage_clear": "Почистити сховище",
+        "header-menu-router_reload-page": "Перезавантажити сторінку",
+        "header-menu-router_load-mainpage": "Головна сторінка",
+
+        "header-menu_clearStorage-dialog_title": "Почистити сховище",
+        "header-menu_clearStorage-dialog_desc": "Ви впевнені, що хочете очистити локальне сховище giboru?",
+
+
+        "post-list_input-tip": "Введіть теги (напр.: azur_lane cute)",
+
+        "post-view_noparams": "Немає параметрів сторінки",
+        "post-view_doctitle": "Пост #%{id} від %{author} на %{booruName} - %{appTitle}",
+        "post-viewer_alltags-expander_title": "Розгорнути всі теги",
+        "post-viewer_response-error": "Помилка клієнта (чи просто пост не знайдено): %{error}",
+        "post-viewer_post-download_button": "<i class='material-icons'>download</i><span class='post-viewer_post-download_button-title'>Завантажити</span>",
+        "post-viewer_post-rating_unknown": "Без рейтингу",
+        "post-viewer_tag-category_artist": "Художник",
+        "post-viewer_tag-category_copyright": "Авторське право",
+        "post-viewer_tag-category_characters": "Персонажі",
+        "post-viewer_tag-category_general": "Загальне",
+        "post-viewer_tag-category_meta": "Мета",
+
+        "router_page-not-found": "Не знайдено",
+        "router_page-proxytip": "Можливо, вам треба <a href='#/settings'>увімкнути проксі?</a>",
+
+        "booru_unsupported_booru-protocol": "Ваша Booru (%{booruName}) не підтримується, вибачте...",
+
+        "settings-page_title": "Налаштування",
+        "settings-page_language-selector_title": "Мова",
+        "settings-page_proxy-switch_title": "Проксі",
+        "settings-page_booru-selector_title": "Керувати Booru",
+        "settings-page_addbooru-title": "Додати Booru"  
+
+    }
+}

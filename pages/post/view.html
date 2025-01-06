@@ -1,0 +1,489 @@
+<link rel="stylesheet" href="/css/flexboxgrid.min.css">
+
+<article>
+    <div class="row around-sm">
+        <div class="start-sm col-sm">
+            <div class="box">
+                <div id="post-viewer_skeleton" class="is-skeleton skeleton-soul"></div>
+                <div id="post-viewer_slot"></div>
+            </div>
+        </div>
+
+        <div class="center-xs col-xs post-viewer_post-info_container">
+            <div class="box">
+                <footer class="post-viewer_post-info is-skeleton skeleton-soul"></footer>
+            </div>
+        </div>
+    </div>
+</article>
+
+<script>
+    (async () => {
+        const pageParams = app.router.getPageParams();
+        const defaultBooru = app.booru.getDefault();
+
+        if (!pageParams)
+            return app.router.displayError(i18n.tr('post-view_noparams'), null, false);
+
+
+        // make "go back" button visible if only user searched by tag
+        // otherwise, go back button is hidden, because we won't prefill search input when
+        // user returns to the post list
+        if (pageParams.search) {
+            const backButton = $('#header_go-back-button');
+            backButton.href = `#/post/list&${JSON.stringify({ search: pageParams.search })}`;
+
+            backButton.hidden = false;
+        }
+
+        // network stuff
+        let responseError;
+
+        const req = await fetch(
+            app.booru.proxy.asProxy(
+                formatTemplate(defaultBooru.api.getPost,
+                    {
+                        posts: defaultBooru.api.posts,
+                        id: pageParams.id
+                    }
+                ), true)
+        );
+
+        const res = await req.json()
+            .catch(e => {
+                app.logger.error(e.message, 'giboru/post.view');
+                responseError = e;
+            });
+
+        // if booru didn't respond, showing the error
+        if (responseError) {
+            return app.router.displayError(
+                formatTemplate(
+                    i18n.tr('post-viewer_response-error'),
+                    {
+                        booruName: defaultBooru.name ?? 'unknown',
+                        error: responseError.message
+                    }
+                )
+            );
+        }
+
+        let postObj;        
+
+        switch (true) {
+            // if it's an array (like Safebooru's response), get the first element
+            case Array.isArray(res):
+                postObj = res[0];
+                break;
+
+            // for all other modern boards, like for Danbooru
+            case typeof res === 'object' && !res.post:
+                postObj = res;
+                break;
+
+            // for Gelbooru
+            case Array.isArray(res.post):                
+                postObj = res.post[0];
+                break;
+
+            default:                
+                return app.router.displayError(
+                    formatTemplate(
+                        i18n.tr('booru_unsupported_booru-protocol'),
+                        {
+                            booruName: defaultBooru.name ?? 'unknown'
+                        }
+                    ),
+
+                    'customError',
+                    false
+                );
+                break;
+        }
+
+        const postTags = [
+            {
+                name: 'all',
+                tags: postObj?.[defaultBooru.keys?.tags],
+                skip: true
+            },
+            {
+                name: i18n.tr('post-viewer_tag-category_artist'),
+                tags: postObj?.[defaultBooru.keys?.tagArtist],
+                color: '#ca3333'
+            },
+            {
+
+                name: i18n.tr('post-viewer_tag-category_copyright'),
+                tags: postObj?.[defaultBooru.keys?.tagCopyright],
+                color: '#8230ff'
+
+            },
+            {
+                name: i18n.tr('post-viewer_tag-category_characters'),
+                tags: postObj?.[defaultBooru.keys?.tagCharacters],
+                color: '#17b023'
+            },
+            {
+                name: i18n.tr('post-viewer_tag-category_general'),
+                tags: postObj?.[defaultBooru.keys?.tagGeneral],
+                color: '#4BB4FF'
+            },
+            {
+                name: i18n.tr('post-viewer_tag-category_meta'),
+                tags: postObj?.[defaultBooru.keys?.tagMeta],
+                color: '#37878a'
+            }
+        ];
+
+        // post stuff
+
+        document.title = formatTemplate(i18n.tr('post-view_doctitle'), {
+            id: postObj?.id,
+            author: postObj?.[defaultBooru.keys.postAuthor],
+            booruName: defaultBooru.name,
+            appTitle: i18n.tr('app-title')
+        });
+
+        $('.post-viewer_post-info')?.classList.remove('is-skeleton', 'skeleton-soul');
+
+        // full-size picture link
+        const postFullLink = document.createElement('a');
+        postFullLink.href = postObj?.file_url;
+        postFullLink.target = '_blank';
+
+        const isSample = postObj?.[defaultBooru.keys.imageIsSample];
+        const imageSrc = isSample ? postObj?.[defaultBooru.keys.imageSample] : postObj?.[defaultBooru.keys.imageOriginal];
+
+        // post sample image
+        const postImage = document.createElement('img');
+        postImage.alt = 'post-viewer_image';
+        postImage.hidden = true;
+        postImage.className = 'post-viewer_image';
+        postImage.src = imageSrc;
+
+        let errors = 0;
+
+        postImage.onerror = () => {
+            errors++;
+
+            if (errors > 3) {
+                postImage.src = 'assets/images/post-viewer_imagenotfound-placeholder.svg';
+            } else {
+                // If the image fails to load, set the source to the original image
+                if (postImage.src !== postObj?.[defaultBooru.keys.imageOriginal]) {
+                    postImage.src = postObj?.[defaultBooru.keys.imageOriginal];
+                    postFullLink.href = postObj?.[defaultBooru.keys.imageOriginal];
+                }
+            }
+        };
+
+        postImage.onload = () => {
+            $('#post-viewer_skeleton').remove();
+            postImage.hidden = false;
+        }
+
+        postFullLink.append(postImage);
+
+        $('#post-viewer_slot').append(postFullLink);
+        $('#post-viewer_slot').classList.remove('is-skeleton', 'skeleton-soul');
+
+        // post meta info (like rating, score, owner, download button, etc.)
+        const postMetaContainer = document.createElement('div');
+        postMetaContainer.className = 'post-viewer_post-meta_container';
+
+        $('#post-viewer_slot').append(postMetaContainer);
+
+        function buildPostMetaItem(iconName, content) {
+            const container = document.createElement('p');
+            container.className = 'post-viewer_post-meta_item-container';
+
+            const icon = document.createElement('i');
+            icon.innerText = iconName;
+            icon.classList.add('material-icons', 'post-viewer_metainfo-icon');
+
+            const item = document.createElement('span');
+            item.className = 'post-viewer_post-meta_item-title';
+            item.innerText = content;
+            container.append(item);
+
+            container.append(icon);
+            container.append(item);
+
+            postMetaContainer.append(container);
+        }
+
+        // post score
+        buildPostMetaItem('star', postObj?.[defaultBooru.keys.postScore]?.toString() ?? 0);
+
+        // post rating (safe/general, questionable, explicit)
+        buildPostMetaItem('photo_filter', postObj?.[defaultBooru.keys.postRating] ?? i18n.tr('post-viewer_post-rating_unknown'));
+
+        // post id
+        buildPostMetaItem('tag', postObj?.id);
+
+        // inserting br, because on mobile devices,
+        // icons are not nearby with text
+        const postMetaBr = document.createElement('br');
+        postMetaContainer.append(postMetaBr);
+
+        // post author (in Safebooru's case - owner/uploader)
+        // icon must be "box", because other icons are also squared
+        buildPostMetaItem('account_box', postObj?.[defaultBooru.keys.postAuthor]);
+
+        // post upload date and time
+        let postUploadKey = postObj?.[defaultBooru.keys.postUploadTime];
+
+        // since Booru's didn't exist in 1970, fixing Safebooru's Unix time to get it understadable for Date()
+        if (new Date(postUploadKey).getFullYear() === 1970) {
+            postUploadKey *= 1000;
+        }
+
+        const postUploadObj = new Date(postUploadKey);
+        const postUploadDate = postUploadObj.toLocaleDateString();
+        const postUploadTime = postUploadObj.toLocaleTimeString();
+
+        buildPostMetaItem('event', `${postUploadDate}, ${postUploadTime}`);
+
+        // download button
+        const postDownloadButton = document.createElement('button');
+        postDownloadButton.className = 'post-viewer_post-download_button';
+        postDownloadButton.innerHTML = i18n.tr('post-viewer_post-download_button');
+
+        // download button link
+        const postDownloadButtonLink = document.createElement('a');
+        postDownloadButtonLink.className = 'post-viewer_post-download_button-link';
+        postDownloadButtonLink.href = postFullLink.href;
+        postDownloadButtonLink.append(postDownloadButton);
+
+        postMetaContainer.append(postDownloadButtonLink);
+
+        // post tags
+        function buildTag(params) {
+            // Create the tag container
+            const tagContainer = document.createElement('a');
+            tagContainer.className = 'post-viewer_tag';
+            tagContainer.style.borderColor = params.color;
+            tagContainer.href = `?search=${params.tag}#/post/list`;
+
+            // Create the tag name element
+            const tagName = document.createElement('p');
+            tagName.className = 'post-viewer_tag-name';
+
+            const tagNameInner = document.createElement('span');
+            tagNameInner.innerText = params.tag;
+            tagName.append(tagNameInner);
+
+            // Append tag name to tag container
+            tagContainer.append(tagName);
+
+            // Append the tag container to the target (grid)
+            if (params.target) {
+                params.target.append(tagContainer);
+            }
+        }
+
+        postTags.forEach(t => {
+            const tag = postTags.find(item => item.name === t.name);
+
+            // Skip if the tag should be skipped
+            if (tag.skip) return;
+
+            if (!tag.tags) return;
+
+            // Create a grid for the current category
+            const grid = document.createElement('div');
+            grid.className = 'post-viewer_tags-grid';
+            $('.post-viewer_post-info').append(grid);
+
+            // Insert the category label before the grid
+            if (tag.name) {
+                const tagCategory = document.createElement('p');
+                tagCategory.className = 'post-viewer_tag-category';
+                tagCategory.innerText = tag.name;
+                if (tag.color) tagCategory.style.color = tag.color;
+
+                // Insert the category before the grid
+                grid.parentNode.insertBefore(tagCategory, grid);
+            }
+
+            // Process tags if they exist
+            if (typeof tag.tags === "string") {
+                tag.tags.split(' ').forEach(n => {
+                    buildTag({
+                        tag: n,
+                        target: grid,
+                        category: tag.name,
+                        color: tag.color
+                    });
+                });
+            }
+        });
+
+        // all tags expander
+        const allTagsExpander = document.createElement('details');
+        allTagsExpander.open = 'true';
+        allTagsExpander.className = 'post-viewer_alltags-expander';
+
+        const allTagsExpanderTitle = document.createElement('summary');
+        allTagsExpanderTitle.style.display = 'inline-block';
+        allTagsExpanderTitle.innerText = i18n.tr('post-viewer_alltags-expander_title');
+        allTagsExpander.append(allTagsExpanderTitle);
+
+        const allTagsExpanderGrid = document.createElement('div');
+        allTagsExpanderGrid.className = 'post-viewer_tags-grid';
+        allTagsExpander.append(allTagsExpanderGrid);
+
+        const allTagString = postTags.find(item => item.name === 'all');
+
+        allTagString.tags.split(' ')
+            .forEach(tag => {
+                buildTag({
+                    tag: tag,
+                    target: allTagsExpanderGrid,
+                    category: null, // No category for all tags
+                    color: null // No color for all tags
+                });
+            });
+
+        // Append the all tags expander to the post info
+        $('.post-viewer_post-info').append(allTagsExpander);
+    })();
+</script>
+
+<style>
+    .post-viewer_image {
+        cursor: zoom-in;
+        width: 500px;
+        border-radius: 5px;
+        margin-bottom: 1em;
+    }
+
+    .post-viewer_post-info {
+        background-color: var(--pico-muted-border-color);
+        border-radius: 8px;
+        padding: 16px;
+    }
+
+    .skeleton-soul {
+        height: 85px;
+    }
+
+    .post-viewer_alltags-expander {
+        margin-top: 1em;
+        user-select: none;
+    }
+
+    .post-viewer_tag-grid {
+        flex-wrap: wrap;
+        max-width: 250px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        gap: 6px;
+        margin-bottom: 1em;
+    }
+
+    .post-viewer_tag-category {
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .post-viewer_tag {
+        font-size: 16px;
+        display: inline-block;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        height: 25px;
+
+        margin: 5px;
+
+        border: 2px solid;
+        border-radius: 12px;
+        text-align: center;
+        padding: 6px;
+        padding-bottom: 25px;
+        transition: background-color 300ms;
+    }
+
+    .post-viewer_tag:hover,
+    .post-viewer_tag:active {
+        background: rgba(179, 185, 197, 0.1);
+    }
+
+
+    .post-viewer_tag-link {
+        font-size: 14px;
+        text-decoration: none;
+    }
+
+    .post-viewer_tag-name {
+        font-size: 16px;
+        display: inline-block;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--pico-h3-color) !important;
+        text-align: center;
+
+        line-height: 1;
+        height: 25px;
+    }
+
+    .post-viewer_post-download_button {
+        display: block !important;
+        width: fit-content;
+        padding: 4px 8px;
+        margin: 10px auto;
+    }
+
+    .post-viewer_post-download_button-link {
+        text-decoration: none;
+    }
+
+    .post-viewer_post-download_button-title {
+        vertical-align: 10%;
+    }
+
+    .post-viewer_post-download_button-title,
+    .post-viewer_post-meta_item-title {
+        font-size: 16px;
+        margin: 5px;
+    }
+
+    .post-viewer_post-meta_container {
+        text-align: center;
+        width: 500px;
+    }
+
+    .post-viewer_post-meta_item-container {
+        display: inline;
+        margin-right: 1em;
+    }
+
+    @media only screen and (max-width: 768px) {
+        article {
+            padding-top: 10px !important;
+            padding-bottom: 5px !important;
+        }
+
+        .post-viewer_post-meta_container,
+        .post-viewer_image {
+            width: 100%;
+        }
+
+        .post-viewer_post-download_button {
+            margin-bottom: 2em;
+        }
+
+        .post-viewer_post-info_container {
+            padding: 0;
+        }
+
+        .post-viewer_tags-grid {
+            margin-bottom: 1em;
+        }
+    }
+</style>

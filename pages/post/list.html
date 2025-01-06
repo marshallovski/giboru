@@ -1,0 +1,255 @@
+<form role="search" class="post-list_form">
+    <!-- <input class="form-control" id="post-list_search" type="search" placeholder=""
+        hx-trigger="input changed delay:500ms, keyup[key=='Enter'], load" hx-indicator=".htmx-indicator"> -->
+
+    <input class="form-control" id="post-list_search" type="search" name="search" placeholder="">
+
+    <input type="submit" value="Search" />
+</form>
+
+<div aria-busy="true" id="load-indicator"></div>
+
+<div class="post-list_footer-paginator">
+    <button class="post-list_footer-paginator_button outline secondary" id="post-list_footer-paginator_back-button">
+        <i class="material-icons">arrow_back</i>
+    </button>
+
+    <p class="post-list_footer-paginator_title" id="post-list_footer-paginator_title"></p>
+
+    <button class="post-list_footer-paginator_button outline contrast" id="post-list_footer-paginator_next-button">
+        <i class="material-icons">arrow_forward</i>
+    </button>
+</div>
+
+<div id="search-results"></div>
+
+<script>
+    // post/list
+    (async function () {
+        $('#header_go-back-button').hidden = true;
+
+        i18n.tr('post-list_input-tip', {
+            elem: '#post-list_search',
+            attr: 'placeholder'
+        });
+
+        document.title = i18n.tr('app-title');
+
+        // prefill by search button, or just by shared url params
+        const urlParams = new URLSearchParams(location.search);
+        const paramsSearchPrefill = app.router.getPageParams()?.search;
+        const paramsPagePrefill = app.router.getPageParams()?.page;
+
+        let currentPage = 1;
+        let currentLimit = 20;
+
+        const defaultBooru = app.booru.getDefault();
+
+        // prefill for search
+        if (urlParams.get('search') && !paramsSearchPrefill) {
+            $('#post-list_search').value = urlParams.get('search');
+
+            await updatePosts();
+        } else if (paramsSearchPrefill) {
+            $('#post-list_search').value = paramsSearchPrefill;
+
+            await updatePosts();
+        }
+
+        // prefill for page
+        if (urlParams.get('page') && !paramsSearchPrefill) {
+            currentPage = urlParams.get('page');
+
+            await updatePosts();
+        } else if (paramsPagePrefill) {
+            currentPage = paramsPagePrefil;
+
+            await updatePosts();
+        }
+
+        async function updatePosts() {
+            while ($('#search-results').firstChild)
+                $('#search-results').firstChild.remove();
+
+            $('#load-indicator').hidden = false;
+
+            const req = await fetch(app.booru.proxy.asProxy(
+                formatTemplate(`${defaultBooru.baseURL}${defaultBooru.api.search}`, {
+                    limit: currentLimit,
+                    page: currentPage,
+                    query: $('#post-list_search').value
+                })
+            )).catch(e => {
+                $('#load-indicator').hidden = true;
+
+                app.router.displayError(i18n.tr('i18n.content-loading_error'), null, true);
+            });
+
+            const res = await req?.json();
+
+            if (res.length === 0) {
+                const errorTitle = document.createElement('h3');
+                errorTitle.innerText = i18n.tr('i18n.content-nocontent');
+
+                return $('#search-results').append(errorTitle);
+            }
+
+            $('#load-indicator').hidden = true;
+
+            let posts;
+
+            if (res.post) {
+                posts = res.post;
+            } else {
+                posts = res;
+            }
+
+            // Loop through each post and create an element for it
+            posts.forEach(post => {
+                const postParams = {
+                    id: post.id,
+                    search: $('#post-list_search').value
+                };
+
+                const postLink = document.createElement('a');
+                postLink.href = `#/post/view&${JSON.stringify(postParams)}`;
+
+                const previewImage = document.createElement('img');
+                previewImage.id = `post-${post.id}`;
+                previewImage.loading = 'lazy';
+                previewImage.src = post[defaultBooru.keys.imagePreview];
+                previewImage.classList.add('post-list_image', 'is-skeleton');
+
+                // Remove skeleton class once image is loaded
+                previewImage.onload = () => previewImage.classList.remove('is-skeleton');
+
+                postLink.append(previewImage);
+                $('#search-results').append(postLink);
+            });
+
+            return res;
+        }
+
+        async function createPaginator(res) {
+            const container = $('#post-list_footer-paginator');
+
+            const backBtn = $('#post-list_footer-paginator_back-button');
+            const nextBtn = $('#post-list_footer-paginator_next-button');
+            const title = $('#post-list_footer-paginator_title');
+
+            backBtn.onclick = async () => {
+                if (currentPage > 1) {
+                    currentPage--; // Decrement the current page
+                    await updatePosts(); // Fetch and update posts
+
+                    title.innerText = formatTemplate(i18n.tr('post-list_footer-paginator_title'), {
+                        current: currentPage,
+                        total: totalPosts
+                    });
+                }
+            }
+
+            nextBtn.onclick = async () => {
+                currentPage++; // Update current page
+                await updatePosts();
+
+                title.innerText = formatTemplate(i18n.tr('post-list_footer-paginator_title'), {
+                    current: currentPage,
+                    total: totalPosts
+                });
+            }
+
+            const totalPosts = res.length;
+            const totalPages = Math.ceil(totalPosts / currentLimit); // Calculate total pages
+
+            title.innerText = formatTemplate(i18n.tr('post-list_footer-paginator_title'), {
+                current: currentPage,
+                total: totalPosts
+            });
+        }
+
+        await updatePosts(currentPage)
+            .then(async res => await createPaginator(res));
+
+        // input onchange search
+        let searchTimeout;
+
+        $('#post-list_search').onchange = async () => {
+            clearTimeout(searchTimeout);
+
+            // Set a new timeout
+            searchTimeout = setTimeout(async () => {
+                await updatePosts(); // Trigger the update with the search query
+            }, 500);
+        }
+    })();
+</script>
+
+<style>
+    .htmx-indicator {
+        margin-bottom: 1em;
+    }
+
+    .post-list_footer-paginator {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .post-list_footer-paginator_button {
+        display: flex;
+        padding: 4px 8px;
+        margin-right: 8px;
+        margin: 1em;
+        vertical-align: bottom;
+    }
+
+    .post-list_footer-paginator_title {
+        margin: 0 !important;
+    }
+
+    .post-list_image {
+        max-height: 200px;
+        max-width: 200px;
+        margin: 10px;
+        border-radius: 5px;
+    }
+
+    @media only screen and (max-width: 768px) {
+        .post-list_image {
+            min-height: 250px;
+            max-height: 300px;
+            max-width: 180px;
+            margin: 2px;
+            object-fit: fill;
+        }
+
+        #component-container {
+            padding: 5px !important;
+        }
+
+        .post-list_form {
+            margin-top: 8px;
+        }
+    }
+
+    @media only screen and (max-width: 380px) {
+        .post-list_image {
+            min-height: 200px;
+            max-height: 250px;
+            max-width: 155px;
+            margin: 2px;
+            object-fit: fill;
+        }
+
+        #component-container {
+            padding: 5px !important;
+        }
+
+        .post-list_form {
+            margin-top: 8px;
+        }
+    }
+</style>

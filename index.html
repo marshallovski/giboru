@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="/assets/images/favicon.png" type="image/png">
+
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/pico.min.css">    
+  <link rel="stylesheet" href="css/sweetalert2.min.css">
+
+  <title data-i18n-key="app-title">giboru</title>
+
+  <meta name="htmx-config" content='{"selfRequestsOnly":false}'>
+  <script src="js/lib/htmx.min.js" defer></script>
+</head>
+
+<body>
+  <noscript>
+    <style>
+      main {
+        display: none;
+      }
+    </style>
+
+    <h3>Enable JavaScript to continue.</h3>
+  </noscript>
+
+  <main class="container">
+    <header>
+      <nav>
+        <ul>
+          <li>
+            <p class="secondary" role="link" id="header_menu-opener">
+              <i class="material-icons">menu</i>
+            </p>
+          </li>
+
+          <li id="header_menu" hidden>
+            <select id="header_menu-select" aria-label="Settings" autocomplete="off">
+              <option selected disabled value="invalid">Menu</option>
+              <option value="header-menu-router_load-mainpage" id="header-menu-router_load-mainpage"></option>
+              <option value="header-menu-router_load-settings" id="header-menu-router_load-settings"></option>
+              <option value="header-menu-localStorage_clear" id="header-menu-localStorage_clear"></option>
+              <option value="header-menu-router_reload-page" id="header-menu-router_reload-page"></option>
+            </select>
+          </li>
+        </ul>
+        <ul>
+          <li>
+            <a href="#" id="header_go-back-button" hidden>
+              <button class="small outline secondary">
+                <i class="material-icons">arrow_back</i>
+                <span id="header_go-back-button-text"></span>
+              </button>
+            </a>
+          </li>
+        </ul>
+        <ul>
+          <li><strong data-i18n-key="mainpage-title" style="user-select: none;">giboru</strong></li>
+        </ul>
+      </nav>
+    </header>
+
+    <article id="component-container">
+      <div id="component-loader" aria-busy="true" hidden></div>
+      <div id="component-container_content"></div>
+    </article>
+  </main>
+
+  <div id="scripts"></div>
+  <script src="js/index.js"></script>
+</body>
+
+</html>
